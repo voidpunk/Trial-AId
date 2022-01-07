@@ -10,9 +10,8 @@ Trial AId is based on the powerful Torchdrug library and the extensive ChEMBL da
 
 ### To do:
 - [x] ClinTox
-- [ ] SIDER
+- [X] SIDER
 - [ ] drug-drug interaction
-- [ ] search for trial + pydeck
-- BBBP?
-- Tox21?
-- fwToxCast?
+- [ ] search for trial
+- [ ] pydeck
+- [ ] BBBP
