@@ -1,83 +1,78 @@
 # imports
 import torch
-from torchdrug import data, datasets, core, models, tasks, utils
-import json
-from time import sleep
+from torchdrug import data, datasets, core, models, tasks
 
 # load SIDER dataset
 dataset = datasets.SIDER(
-    "./data/sider/",
-    # node_feature="pretrain",
-    # edge_feature="pretrain"
+    "./models/data/sider/",
+    node_feature="pretrain",
+    edge_feature="pretrain"
     )
 
-# training loop
-decision = True
-while decision:
-    # split the dataset into training, validation and test sets
-    lengths = [int(0.8 * len(dataset)), int(0.1 * len(dataset))]
-    lengths += [len(dataset) - sum(lengths)]
-    train_set, valid_set, test_set = torch.utils.data.random_split(dataset, lengths)
+# split the dataset into training, validation and test sets
+lengths = [int(0.8 * len(dataset)), int(0.1 * len(dataset))]
+lengths += [len(dataset) - sum(lengths)]
+train_set, valid_set, test_set = data.ordered_scaffold_split(dataset, lengths)
 
-    # define the model
-    model = models.GIN(
-        input_dim=dataset.node_feature_dim,
-        hidden_dims=[256, 256, 256, 256],
-        short_cut=True,
-        batch_norm=True,
-        concat_hidden=True
+# define the model
+model = models.GIN(
+    input_dim=dataset.node_feature_dim,
+    hidden_dims=[
+        1024,
+        1024
+    ],
+    edge_input_dim=dataset.edge_feature_dim,
+    short_cut=False,
+    activation="sigmoid",
+    concat_hidden=True,
+    batch_norm=True,
+    readout="mean"
+    )
+
+# define the task
+task = tasks.PropertyPrediction(
+    model,
+    task=dataset.tasks,
+    criterion="bce",
+    metric=(
+        # "auprc",
+        "auroc"
         )
+    )
 
-    # define the task
-    task = tasks.PropertyPrediction(
-        model,
-        task=dataset.tasks,
-        criterion="bce",
-        metric=(
-            # "auprc",
-            "auroc"
-            )
-        )
+# define the optimizer
+optimizer = torch.optim.Adam(
+    task.parameters(),
+    lr=1e-3
+    )
 
-    # define the optimizer
-    optimizer = torch.optim.Adam(
-        task.parameters(),
-        lr=1e-4
-        )
+# define the solver
+solver = core.Engine(
+    task,
+    train_set,
+    valid_set,
+    test_set,
+    optimizer,
+    gpus=[0],
+    batch_size=512
+    )
 
-    # define the solver
-    solver = core.Engine(
-        task,
-        train_set,
-        valid_set,
-        test_set,
-        optimizer,
-        gpus=[0],
-        batch_size=4096
-        )
+# load the pretrained infograph model
+checkpoint = torch.load("./models/pretrain/infograph_unsupervised.pth")["model"]
+task.load_state_dict(checkpoint, strict=False)
 
-    # train the model
-    solver.train(num_epoch=200)
+# train the model
+solver.train(num_epoch=250)
 
-    # evaluate the model
-    metrics = solver.evaluate("valid")
+# evaluate the model
+metrics = solver.evaluate("valid")
 
-    # check the accuracy
-    metrics_counter = 0
-    for key, value in metrics.items():
-        # print(key, value)
-        metrics_counter += value.item()
-    if metrics_counter >= len(metrics) * 0.7:
-        decision = False
+# display the results
+metrics_counter = 0
+for key, value in metrics.items():
+    metrics_counter += value.item()
+print(round(metrics_counter/len(metrics)*100, 2), "%")
 
-    # avoid overheating of my Hell-Inspiron
-    if decision == True:
-        sleep(10)
-
-# save the model
-with open("./sider/sider_model.json", "w") as fout:
-    json.dump(solver.config_dict(), fout)
-solver.save("./sider/sider_model.pth")
 
 # # plot samples
 # import matplotlib
