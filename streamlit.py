@@ -1,5 +1,8 @@
 import streamlit as st
 import model as mod
+import plotly.express as px
+import pandas as pd
+
 
 st.title("Trial AId")
 
@@ -23,8 +26,9 @@ key = st.text_input("Enter the molecule name:")
 col1, col2, = st.columns(2)
 
 if key != "":
+    col1.write("")
 
-    inchi = mod.query(key)
+    inchi, infos = mod.query(key)
     graph = mod.construct(inchi)
 
     graph.visualize(
@@ -33,6 +37,8 @@ if key != "":
         )
     # st.pyplot(graph.visualize())
 
+    col1.write(infos)
+
     col2.image(
         "graph.png",
         width=300,
@@ -40,12 +46,38 @@ if key != "":
         use_column_width=True
         )
 
-    model, task = mod.load()
-    pred = mod.predict(graph, model, task)
+    clintox_model, clintox_task = mod.load_clintox()
+    clintox_pred = mod.predict(graph, clintox_model, clintox_task, "clintox")
+    # col1.write(clintox_pred)
+    clintox_df = pd.DataFrame.from_dict(clintox_pred, orient="index", columns=["score"])
+    # col1.write(clintox_df)
+    clintox_fig = px.bar(
+        clintox_df, x="score", y=clintox_df.index,
+        labels={"score": "Probability", "index": ""}, color="score",
+        height=250
+        )
+    # color_discrete_map={
+    #     'some_group': 'red',
+    #     'some_other_group': 'green'
+    # }
+    st.plotly_chart(clintox_fig, use_container_width=True)
 
-    col1.write("")
-    col1.write("FDA approval: {}%".format(pred["FDA approved"]))
-    col1.write("Toxic: {}%".format(pred["toxic"]))
+    sider_model, sider_task = mod.load_sider()
+    sider_pred = mod.predict(graph, sider_model, sider_task, "sider")
+
+    sider_df = pd.DataFrame.from_dict(sider_pred, orient="index", columns=["score"])
+    sider_df.sort_values(by="score", inplace=True)
+    # st.write(sider_df)
+    fig = px.bar(
+        sider_df, y=sider_df.index, x=sider_df["score"],
+        labels={"score": "Probability", "index": ""}, color="score",
+        orientation="h", height=900,
+        )
+    # fig.update_xaxes(tickangle=60)
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+    )
 
 st.header("About")
 st.write("Trial AId is based on the powerful Torchdrug library and the extensive ChEMBL database.")
