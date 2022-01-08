@@ -1,12 +1,13 @@
 # imports
 import torch
 from torchdrug import data, datasets, core, models, tasks
+import json
 
 # load SIDER dataset
 dataset = datasets.SIDER(
     "./models/data/sider/",
-    node_feature="pretrain",
-    edge_feature="pretrain"
+    # node_feature="pretrain",
+    # edge_feature="pretrain"
     )
 
 # split the dataset into training, validation and test sets
@@ -18,8 +19,14 @@ train_set, valid_set, test_set = data.ordered_scaffold_split(dataset, lengths)
 model = models.GIN(
     input_dim=dataset.node_feature_dim,
     hidden_dims=[
+        # infographs pretrained:
         1024,
-        1024
+        1024,
+        # attributemasking pretrained:
+        # 512,
+        # 512,
+        # 512,
+        # 512
     ],
     edge_input_dim=dataset.edge_feature_dim,
     short_cut=False,
@@ -57,12 +64,20 @@ solver = core.Engine(
     batch_size=512
     )
 
-# load the pretrained infograph model
-checkpoint = torch.load("./models/pretrain/infograph_unsupervised.pth")["model"]
-task.load_state_dict(checkpoint, strict=False)
+pretrained_model = "none"
+if pretrained_model == "infograph":
+    # load the pretrained infograph model8
+    checkpoint = torch.load("./models/pretrain/infograph_unsupervised.pth")["model"]
+    task.load_state_dict(checkpoint, strict=False)
+elif pretrained_model == "attributemasking":
+    # load the pretrained attributemasking model
+    checkpoint = torch.load("./models/pretrain/attributemasking_unsupervised.pth")["model"]
+    task.load_state_dict(checkpoint, strict=False)
+elif pretrained_model == "none":
+    pass
 
 # train the model
-solver.train(num_epoch=250)
+solver.train(num_epoch=500)
 
 # evaluate the model
 metrics = solver.evaluate("valid")
@@ -72,6 +87,11 @@ metrics_counter = 0
 for key, value in metrics.items():
     metrics_counter += value.item()
 print(round(metrics_counter/len(metrics)*100, 2), "%")
+
+# save the model
+with open("./models/sider/sider_model.json", "w") as fout:
+    json.dump(model.config_dict(), fout)
+solver.save("./models/sider/sider_model.pth")
 
 
 # # plot samples
