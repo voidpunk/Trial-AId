@@ -104,9 +104,13 @@ def load_sider():
     model = models.GIN(
         input_dim=69,
         hidden_dims=[256, 256, 256, 256],
-        short_cut=True,
+        # edge_input_dim=11,
+        num_mlp_layer=2,
+        short_cut=False,
         batch_norm=True,
-        concat_hidden=True
+        concat_hidden=True,
+        # readout="mean",
+        activation="sigmoid"
         )
 
     # define the task"auroc"
@@ -159,21 +163,25 @@ def predict(graph, model, task, dataset) -> "dict":
 
     # predict the ClinTox features of the retrieved molecule
     with torch.no_grad():
+
         model.eval()
         sample = data.graph_collate([{"graph": graph}])
         print(sample)
         print(sample["graph"].shape)
         # sample = utils.cuda(sample)
+
         pred = torch.sigmoid(task.predict(sample))
         print(pred)
         # print(pred.shape)
         # print(pred[0][0].item())
         # print(pred[0][1].item())
+
         if dataset == "clintox":
             pred = {
                 "FDA approval": round(pred[0][0].item()*100, 2),
                 "toxicity": round(pred[0][1].item()*100, 2)
             }
+
         elif dataset == "sider":
             pred = {
             "Hepatobiliary disorders": round(pred[0][0].item()*100, 2),
@@ -212,6 +220,7 @@ eval1 = False
 eval2 = True
 
 if __name__ == "__main__":
+
     if eval1 == True:
         inchi, _ = query("aspirin")
         graph = construct(inchi)
@@ -221,6 +230,7 @@ if __name__ == "__main__":
         model, task = load_sider()
         pred = predict(graph, model, task, "sider")
         print("\nSIDER:", pred)
+
     if eval2 == True:
         from torchdrug import datasets
         dataset = datasets.SIDER("./data/sider/")
@@ -229,8 +239,6 @@ if __name__ == "__main__":
         pred = task.predict(batch)
         print(batch)
         print(pred)
-else:
-    pass
 
 
 # # plot the graph
