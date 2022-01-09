@@ -17,24 +17,24 @@ def query(key: "str") -> "tuple(str, dict)":
 
     # print("\n\n", molecule, "\n\n")
 
-    # retrieve the InChi
+    # retrieve the infos
     inchi = molecule["molecule_structures"]["standard_inchi"]
-    print(inchi)
+    # print(inchi)
     # print(type(inchi))
     first_approval = molecule["first_approval"]
-    print(first_approval)
+    # print(first_approval)
     indication_class = molecule["indication_class"]
-    print(indication_class)
+    # print(indication_class)
     max_phase = molecule["max_phase"]
-    print(max_phase)
+    # print(max_phase)
     natural_product = molecule["natural_product"]
-    print(natural_product)
+    # print(natural_product)
     oral = molecule["oral"]
-    print(oral)
+    # print(oral)
     parenteral = molecule["parenteral"]
-    print(parenteral)
+    # print(parenteral)
     topical = molecule["topical"]
-    print(topical)
+    # print(topical)
 
     infos = {
         "first_approval": first_approval,
@@ -56,12 +56,12 @@ def construct(inchi: "str") -> "graph":
 
     # construct the graph
     graph = Chem.MolFromInchi(inchi)
-    print(graph)
+    # print(graph)
     # print(type(graph))
 
     # construct the torchdrug molecule object
     graph = data.Molecule.from_molecule(graph, kekulize=True)
-    print(graph)
+    # print(graph)
     # print(type(graph))
     return graph
 
@@ -166,12 +166,12 @@ def predict(graph, model, task, dataset) -> "dict":
 
         model.eval()
         sample = data.graph_collate([{"graph": graph}])
-        print(sample)
-        print(sample["graph"].shape)
+        # print(sample)
+        # print(sample["graph"].shape)
         # sample = utils.cuda(sample)
 
         pred = torch.sigmoid(task.predict(sample))
-        print(pred)
+        # print(pred)
         # print(pred.shape)
         # print(pred[0][0].item())
         # print(pred[0][1].item())
@@ -186,16 +186,16 @@ def predict(graph, model, task, dataset) -> "dict":
             pred = {
             "Hepatobiliary disorders": round(pred[0][0].item()*100, 2),
             "Metabolism & nutrition disorders": round(pred[0][1].item()*100, 2),
-            "Product issues": round(pred[0][2].item()*100, 2),
+            # "Product issues": round(pred[0][2].item()*100, 2),
             "Eye disorders": round(pred[0][3].item()*100, 2),
-            "Investigations": round(pred[0][4].item()*100, 2),
+            # "Investigations": round(pred[0][4].item()*100, 2),
             "Musculoskeletal & connective tissue disorders": round(pred[0][5].item()*100, 2),
             "Gastrointestinal disorders": round(pred[0][6].item()*100, 2),
-            "Social circumstances": round(pred[0][7].item()*100, 2),
+            # "Social circumstances": round(pred[0][7].item()*100, 2),
             "Immune system disorders": round(pred[0][8].item()*100, 2),
             "Reproductive system & breast disorders": round(pred[0][9].item()*100, 2),
             "Neoplasms benign, malignant & unspecified": round(pred[0][10].item()*100, 2),
-            "General disorders & administration site conditions": round(pred[0][11].item()*100, 2),
+            # "General disorders & administration site conditions": round(pred[0][11].item()*100, 2),
             "Endocrine disorders": round(pred[0][12].item()*100, 2),
             "Surgical & medical procedures": round(pred[0][13].item()*100, 2),
             "Vascular disorders": round(pred[0][14].item()*100, 2),
