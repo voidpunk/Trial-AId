@@ -1,5 +1,11 @@
 # Trial AId
 
+**TL;DR:**
+
+Trial AId is a simple webapp that allows to search for a drug (experimental or not) and provides predictions through deep learning about the possible side effects and FDA approval of the drug, moreover it allows you to see the related clinical trials on that molecule currently available worldwide, all in one place and with one query.
+
+**Description:**
+
 Currently all the pieces of information provided to the subjects involved in clinical trials come from the preclinical phase on animal models. Often they are not enough detailed or accurate to reliably inform the patients about all the possible outcomes of the experimental treatment which the subject is going to receive.
 
 This is where Trial AId comes: it is an AI-powered tool that aims at providing more detailed information to the patient about the possible outcomes of the clinical trial, in order to ***aid*** more informed decisions when choosing to participate to a ***trial***. This is possible thanks to a deep learning algorithm trained on hundreds of thousands of molecular structures and their corresponding properties and interactions.
@@ -10,8 +16,8 @@ Trial AId is based on the powerful Torchdrug library and the extensive ChEMBL da
 
 ### To do:
 - [x] ClinTox
-- [X] SIDER
+- [x] SIDER
 - [ ] drug-drug interaction
-- [ ] search for trial
-- [ ] pydeck
+- [x] search for trial
+- [x] pydeck
 - [ ] BBBP
