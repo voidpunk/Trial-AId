@@ -89,10 +89,14 @@ for key, value in metrics.items():
 print(round(metrics_counter/len(metrics)*100, 2), "%")
 
 # save the model
-with open("./models/sider/sider_model.json", "w") as fout:
-    json.dump(model.config_dict(), fout)
-solver.save("./models/sider/sider_model.pth")
-
+save = input("Save the model? (y/n) ")
+if save == "y" or save == "Y":
+    with open("./models/sider/sider_model.json", "w") as fout:
+        json.dump(model.config_dict(), fout)
+    solver.save("./models/sider/sider_model.pth")
+    print("Model saved.")
+else:
+    print("Model not saved.")
 
 # # plot samples
 # import matplotlib
