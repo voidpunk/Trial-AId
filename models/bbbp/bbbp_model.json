@@ -1,0 +1,1 @@
+{"class": "models.GIN", "input_dim": 22, "hidden_dims": [512, 512, 512, 512], "edge_input_dim": 11, "num_mlp_layer": 2, "eps": 0, "learn_eps": false, "short_cut": false, "batch_norm": true, "activation": "sigmoid", "concat_hidden": true, "readout": "mean"}
