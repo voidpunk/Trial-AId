@@ -6,8 +6,8 @@ import json
 # load SIDER dataset
 dataset = datasets.SIDER(
     "./models/data/sider/",
-    # node_feature="pretrain",
-    # edge_feature="pretrain"
+    node_feature="pretrain",
+    edge_feature="pretrain"
     )
 
 # split the dataset into training, validation and test sets
@@ -19,14 +19,18 @@ train_set, valid_set, test_set = data.ordered_scaffold_split(dataset, lengths)
 model = models.GIN(
     input_dim=dataset.node_feature_dim,
     hidden_dims=[
-        # infographs pretrained:
-        1024,
-        1024,
-        # attributemasking pretrained:
-        # 512,
-        # 512,
-        # 512,
-        # 512
+        # 1024,
+        # 1024,
+        # 1024,
+        # 1024,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
     ],
     edge_input_dim=dataset.edge_feature_dim,
     short_cut=False,
@@ -64,8 +68,9 @@ solver = core.Engine(
     batch_size=512
     )
 
-pretrained_model = "none"
-if pretrained_model == "infograph":
+pretrained_model = "infograph"
+
+if pretrained_model == "attributemasking":
     # load the pretrained infograph model8
     checkpoint = torch.load("./models/pretrain/infograph_unsupervised.pth")["model"]
     task.load_state_dict(checkpoint, strict=False)
@@ -103,7 +108,7 @@ else:
 # import matplotlib.pyplot as plt
 # matplotlib.use("TkAgg")
 # samples = []
-# categories = set()
+# categories = set()lang
 # for sample in valid_set:
 #     category = tuple([v for k, v in sample.items() if k != "graph"])
 #     if category not in categories:
