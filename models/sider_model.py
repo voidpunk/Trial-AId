@@ -19,10 +19,6 @@ train_set, valid_set, test_set = data.ordered_scaffold_split(dataset, lengths)
 model = models.GIN(
     input_dim=dataset.node_feature_dim,
     hidden_dims=[
-        # 1024,
-        # 1024,
-        # 1024,
-        # 1024,
         512,
         512,
         512,
@@ -35,6 +31,7 @@ model = models.GIN(
     edge_input_dim=dataset.edge_feature_dim,
     short_cut=False,
     activation="sigmoid",
+    num_mlp_layer=2,
     concat_hidden=True,
     batch_norm=True,
     readout="mean"
@@ -68,7 +65,7 @@ solver = core.Engine(
     batch_size=512
     )
 
-pretrained_model = "infograph"
+pretrained_model = "attributemasking"
 
 if pretrained_model == "attributemasking":
     # load the pretrained infograph model8
