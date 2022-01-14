@@ -1,3 +1,2 @@
-ninja
 ninja-build
 build-essential
