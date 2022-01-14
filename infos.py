@@ -1,10 +1,11 @@
 from pytrials.client import ClinicalTrials
 import geopy
 from geopy.geocoders import Nominatim, DataBC, GeoNames, Photon, Bing
+from geopy.adapters import AioHTTPAdapter
 import pandas as pd
 import numpy as np
-from time import sleep
-from func_timeout import func_timeout, FunctionTimedOut
+from time import sleep, time
+import asyncio
 
 
 def query(key):
@@ -22,61 +23,115 @@ def query(key):
             # "PhaseList",
             "LocationFacility",
             ],
-        max_studies=20
+        max_studies=30,
+        timer=1,
+        retries=5
     )
     return search
 
 
-def load():
+async def geocode_async(address):
+
+    try:
+        async with Bing(
+            api_key="Amh-_uUK56C9ZaUCI63lVDVyJLRQGGOmgeNWVPrO0gu4YufXeCaNmOzOqmsZA-Vx",
+            adapter_factory=AioHTTPAdapter
+            ) as geolocator_bing:
+                location = await geolocator_bing.geocode(address)
+        if location is None:
+            async with Nominatim(
+                user_agent="Trial-AId",
+                adapter_factory=AioHTTPAdapter
+                ) as geolocator_nominatim:
+                location = await geolocator_nominatim.geocode(address)
+        if location is None:
+            return np.nan, np.nan
+        else:
+            return location.latitude, location.longitude
+
+    except geopy.adapters.AdapterHTTPError as e:
+        print(e)
+        async with Nominatim(
+                user_agent="Trial-AId",
+                adapter_factory=AioHTTPAdapter
+                ) as geolocator_nominatim:
+                location = await geolocator_nominatim.geocode(address)
+        if location is None:
+            return np.nan, np.nan
+        else:
+            return location.latitude, location.longitude
+
+    except geopy.exc.GeocoderQueryError as e:
+        print(e)
+        async with Nominatim(
+                user_agent="Trial-AId",
+                adapter_factory=AioHTTPAdapter
+                ) as geolocator_nominatim:
+                location = await geolocator_nominatim.geocode(address)
+        if location is None:
+            return np.nan, np.nan
+        else:
+            return location.latitude, location.longitude
+
+    except geopy.exc.GeocoderRateLimited as e:
+        print(e)
+        sleep(10)
+        geocode(address)
+
+    except geopy.exc.GeocoderTimedOut as e:
+        print(e)
+        geocode_async(address)
+
+
+def geocode(address):
+
     geolocator_bing = Bing(api_key="Amh-_uUK56C9ZaUCI63lVDVyJLRQGGOmgeNWVPrO0gu4YufXeCaNmOzOqmsZA-Vx")
     geolocator_nominatim = Nominatim(user_agent="Trial-AId")
-    return geolocator_bing, geolocator_nominatim
 
-
-def geocode(address, geolocator_bing, geolocator_nominatim):
     try:
         location = geolocator_bing.geocode(address)
         if location is None:
             location = geolocator_nominatim.geocode(address)
             if location is None:
-                sleep(1)
+                # sleep(1)
                 return np.nan, np.nan
             else:
-                sleep(1)
+                # sleep(1)
                 return location.latitude, location.longitude
         else:
-            sleep(1)
+            # sleep(1)
             return location.latitude, location.longitude
+
     except geopy.adapters.AdapterHTTPError as e:
         print(e)
         location = geolocator_nominatim.geocode(address)
         if location is None:
-            sleep(1)
+            # sleep(1)
             return np.nan, np.nan
         else:
-            sleep(1)
+            # sleep(1)
             return location.latitude, location.longitude
+
     except geopy.exc.GeocoderQueryError as e:
         print(e)
         location = geolocator_nominatim.geocode(address)
         if location is None:
-            sleep(1)
+            # sleep(1)
             return np.nan, np.nan
         else:
-            sleep(1)
+            # sleep(1)
             return location.latitude, location.longitude
+
+    except geopy.exc.GeocoderTimedOut as e:
+        print(e)
+        geocode(address)
 
 
 def get_dataframe(key):
-    while True:
-        try:
-            search = func_timeout(5, query, args=(key,))
-            break
-        except FunctionTimedOut:
-            print("TIMEOUT")
-            continue
+    search = query(key)
     df = pd.DataFrame.from_records(search[1:], columns=search[0])
     df = df[df.OverallStatus != "Completed"]
+    df = df[df.OverallStatus != "Terminated"]
     df = df[df.LocationFacility != ""]
     df["Link"] = df["NCTId"].apply(lambda x: "https://clinicaltrials.gov/ct2/show/" + x)
     df.drop(columns=["Rank", "NCTId"], inplace=True)
@@ -84,22 +139,56 @@ def get_dataframe(key):
 
 
 def get_coordinates(df):
-    geolocator_bing, geolocator_nominatim = load()
-    df["Latitude"] = df["LocationFacility"]\
-        .apply(lambda x: geocode(x, geolocator_bing, geolocator_nominatim)[0])
-    df["Longitude"] = df["LocationFacility"]\
-        .apply(lambda x: geocode(x, geolocator_bing, geolocator_nominatim)[1])
-    df.dropna(inplace=True)
-    # return df[["Longitude", "Latitude"]]
+    df["Latitude"] = df["LocationFacility"].apply(lambda x: geocode(x)[0])
+    df["Longitude"] = df["LocationFacility"].apply(lambda x: geocode(x)[1])
     return df
 
 
+async def get_coordinates_async(df):
+    tasks = []
+    for el in df["LocationFacility"].values:
+        task = asyncio.ensure_future(geocode_async(el))
+        tasks.append(task)
+    coordinates = await asyncio.gather(*tasks, return_exceptions=True)
+    df["Latitude"] = [el[0] for el in coordinates]
+    df["Longitude"] = [el[1] for el in coordinates]
+    return df
 
-if __name__ == "__main__":
-    df = get_dataframe("LSD")
-    print(df)
+
+def clean_coordinates(df):
+    df[df["Longitude"].apply(lambda x: x is np.float64)]
+    df[df["Latitude"].apply(lambda x: x is np.float64)]
+    df.dropna(inplace=True)
+    return df
+
+
+def get_info(key):
+    df = get_dataframe(key)
     df = get_coordinates(df)
+    df = clean_coordinates(df)
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+
+def get_info_async(key):
+    df = get_dataframe(key)
+    df = asyncio.run(get_coordinates_async(df))
+    df = clean_coordinates(df)
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+
+sync = True
+if __name__ == "__main__":
+    t1 = time()
+    if sync:
+        df = get_info("aspirin")
+    else:
+        df = get_info_async("aspirin")
+    t2 = time() - t1
     print(df)
+    print(t2)
+    # print(type(df.Longitude.values[0]))
 
 
 
