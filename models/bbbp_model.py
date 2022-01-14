@@ -25,8 +25,9 @@ model = models.GIN(
         512
     ],
     edge_input_dim=dataset.edge_feature_dim,
-    short_cut=False,
+    num_mlp_layer=2,
     activation="sigmoid",
+    short_cut=False,
     concat_hidden=True,
     batch_norm=True,
     readout="mean"

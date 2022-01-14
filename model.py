@@ -2,6 +2,7 @@ from chembl_webresource_client.new_client import new_client
 import torch
 from torchdrug import data, models, tasks, datasets, utils
 from rdkit import Chem
+import pandas as pd
 
 
 def query(key):
@@ -181,7 +182,46 @@ def load_sider():
     return model, task
 
 
-def predict(graph, model, task, dataset):
+def load_bbbp():
+    """
+    It loads the BBBP pretrained model and task.
+    """
+    # define the model
+    model = models.GIN(
+        input_dim=22,
+        hidden_dims=[
+            512,
+            512,
+            512,
+            512
+        ],
+        edge_input_dim=11,
+        num_mlp_layer=2,
+        activation="sigmoid",
+        short_cut=False,
+        batch_norm=True,
+        concat_hidden=True,
+        readout="mean",
+        )
+    # define the task
+    task = tasks.PropertyPrediction(
+        model,
+        task=[
+            "p_np",
+    ],
+        criterion="bce",
+        metric=(
+            "auroc"
+            )
+        )
+    # load the weights and task settings
+    checkpoint = torch.load("models/bbbp/bbbp_model.pth")["model"]
+    task.load_state_dict(checkpoint, strict=False)
+    # return the result
+    return model, task
+
+
+def predict(graph, model, task, dataset, func="sigmoid"):
     """
     Given a graph, a model (among the ones in this file), a task, and a dataset,
     it predicts the labels according to the model.
@@ -193,7 +233,17 @@ def predict(graph, model, task, dataset):
         # print(sample)
         # print(sample["graph"].shape)
         # sample = utils.cuda(sample)
-        pred = torch.sigmoid(task.predict(sample))
+        pred_raw = task.predict(sample)
+        if func == "sigmoid":
+            pred = torch.sigmoid(pred_raw)
+        elif func == "softmax":
+            pred = torch.softmax(pred_raw, dim=1)
+        elif func == "argmax":
+            pred = torch.argmax(pred_raw, dim=1)
+        elif func == "none":
+            pred = pred_raw
+        elif func == "step":
+            pred = torch.where(pred_raw > 0.5, torch.ones_like(pred_raw), torch.zeros_like(pred_raw))
         # print(pred)
         # print(pred.shape)
         # print(pred[0][0].item())
@@ -233,7 +283,11 @@ def predict(graph, model, task, dataset):
             # "Respiratory, thoracic & mediastinal disorders": round(pred[0][19].item()*100, 2),        # 54.99
             # "Pregnancy, puerperium & perinatal conditions": round(pred[0][22].item()*100, 2),         # 56.20
             }
-        return pred
+        elif dataset == "bbbp":
+            pred = {
+            "BBB penetration": round(pred[0][0].item()*100, 2),
+            }
+        return pd.DataFrame.from_dict(pred, orient="index", columns=["score"])
 
 
 def get_info_n_pred(key_mol, from_key=False):
@@ -254,15 +308,18 @@ def get_info_n_pred(key_mol, from_key=False):
     # load the models and tasks
     clintox_model, clintox_task = load_clintox()
     sider_model, sider_task = load_sider()
+    bbbp_model, bbbp_task = load_bbbp()
     # get the predictions
     clintox_pred = predict(graph_default, clintox_model, clintox_task, dataset="clintox")
     sider_pred = predict(graph_pretrain, sider_model, sider_task, dataset="sider")
+    bbbp_pred = predict(graph_pretrain, bbbp_model, bbbp_task, dataset="bbbp", func="step")
     # return the prediction
     return {
         "infos": infos,
         "graph": graph_default,
         "clintox_pred": clintox_pred,
-        "sider_pred": sider_pred
+        "sider_pred": sider_pred,
+        "bbbp_pred": bbbp_pred
     }
 
 

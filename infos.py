@@ -150,12 +150,14 @@ async def get_coordinates_async(df):
         task = asyncio.ensure_future(geocode_async(el))
         tasks.append(task)
     coordinates = await asyncio.gather(*tasks, return_exceptions=True)
-    df["Latitude"] = [el[0] for el in coordinates]
-    df["Longitude"] = [el[1] for el in coordinates]
+    print(coordinates)
+    df["Latitude"] = [el[0] if el is not None else np.nan for el in coordinates]
+    df["Longitude"] = [el[1] if el is not None else np.nan for el in coordinates]
     return df
 
 
 def clean_coordinates(df):
+    print(df)
     df[df["Longitude"].apply(lambda x: x is np.float64)]
     df[df["Latitude"].apply(lambda x: x is np.float64)]
     df.dropna(inplace=True)
