@@ -4,6 +4,7 @@ from torchdrug import data, models, tasks, datasets, utils
 from rdkit import Chem
 import pandas as pd
 
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def query(key):
     """
@@ -107,7 +108,7 @@ def load_clintox():
             )
         )
     # load the weights and task settings
-    checkpoint = torch.load("models/clintox/clintox_model.pth")["model"]
+    checkpoint = torch.load("models/clintox/clintox_model.pth", map_location=device)["model"]
     task.load_state_dict(checkpoint, strict=False)
     # return the model and task
     return model, task
@@ -176,7 +177,7 @@ def load_sider():
             )
         )
     # load the weights and task settings
-    checkpoint = torch.load("models/sider/sider_model.pth")["model"]
+    checkpoint = torch.load("models/sider/sider_model.pth", map_location=device)["model"]
     task.load_state_dict(checkpoint, strict=False)
     # return the result
     return model, task
@@ -215,7 +216,7 @@ def load_bbbp():
             )
         )
     # load the weights and task settings
-    checkpoint = torch.load("models/bbbp/bbbp_model.pth")["model"]
+    checkpoint = torch.load("models/bbbp/bbbp_model.pth", map_location=device)["model"]
     task.load_state_dict(checkpoint, strict=False)
     # return the result
     return model, task
