@@ -1,41 +1,39 @@
-# imports
 from chembl_webresource_client.new_client import new_client
 import torch
-from torchdrug import data, models, tasks
+from torchdrug import data, models, tasks, datasets, utils
 from rdkit import Chem
 
 
-def query(key: "str") -> "tuple(str, dict)":
+def query(key):
     """
-    Query the ChEMBL database for a molecule and return its InChI.
+    Query the ChEMBL database for a molecule and returns it and its infos as a dictionary.
+    if found, else it returns None.
     """
-
-    # query the ChEMBL database for the molecule
     molecule = new_client.molecule\
         .filter(molecule_synonyms__molecule_synonym__iexact=key)[0]
-        # .only("molecule_structures")[0]
+    if molecule is None:
+        return None
+    else:
+        return molecule
 
-    # print("\n\n", molecule, "\n\n")
 
+def extract_data(molecule, type="inchi"):
+    """
+    Given a molecule and its infos as dictionary, it extracts and reorders
+    the information which is returned as a tuple o either InChI or SMILES, and
+    the other infos.
+    """
     # retrieve the infos
     inchi = molecule["molecule_structures"]["standard_inchi"]
-    # print(inchi)
-    # print(type(inchi))
+    smiles = molecule["molecule_structures"]["canonical_smiles"]
     first_approval = molecule["first_approval"]
-    # print(first_approval)
     indication_class = molecule["indication_class"]
-    # print(indication_class)
     max_phase = molecule["max_phase"]
-    # print(max_phase)
     natural_product = molecule["natural_product"]
-    # print(natural_product)
     oral = molecule["oral"]
-    # print(oral)
     parenteral = molecule["parenteral"]
-    # print(parenteral)
     topical = molecule["topical"]
-    # print(topical)
-
+    # organize the infos
     infos = {
         "first_approval": first_approval,
         "indication_class": indication_class,
@@ -45,29 +43,48 @@ def query(key: "str") -> "tuple(str, dict)":
         "parenteral": parenteral,
         "topical": topical
     }
+    # return the infos
+    if type == "smiles":
+        return smiles, infos
+    elif type == "inchi":
+        return inchi, infos
 
-    return inchi, infos
 
-
-def construct(inchi: "str") -> "graph":
+def construct(mol, type="inchi", pretrain="True"):
     """
-    Construct a molecular graph from an InChI.
+    Given an InChI or SMILES, it constructs its graph and returns it as a
+    torchdrug molecule object.
     """
-
-    # construct the graph
-    graph = Chem.MolFromInchi(inchi)
-    # print(graph)
-    # print(type(graph))
-
+    # construct the RDKit molecule object
+    if type == "inchi":
+        # construct the graph
+        graph = Chem.MolFromInchi(mol)
+    elif type == "smiles":
+        # construct the graph
+        graph = Chem.MolFromSmiles(mol)
     # construct the torchdrug molecule object
-    graph = data.Molecule.from_molecule(graph, kekulize=True)
-    # print(graph)
-    # print(type(graph))
+    if pretrain:
+        graph = data.Molecule.from_molecule(
+            graph,
+            kekulize=True,
+            node_feature="pretrain",
+            edge_feature="pretrain"
+            )
+    else:
+        graph = data.Molecule.from_molecule(
+            graph,
+            kekulize=True,
+            node_feature="default",
+            edge_feature="default"
+            )
+    # return the graph object
     return graph
 
 
 def load_clintox():
-
+    """
+    It loads the ClinTox pretrained model and task.
+    """
     # define the model
     model = models.GIN(
         input_dim=69,
@@ -76,7 +93,6 @@ def load_clintox():
         batch_norm=True,
         concat_hidden=True
         )
-
     # define the task
     task = tasks.PropertyPrediction(
         model,
@@ -86,33 +102,41 @@ def load_clintox():
             ],
         criterion="bce",
         metric=(
-            # "auprc",
             "auroc"
             )
         )
-
     # load the weights and task settings
     checkpoint = torch.load("models/clintox/clintox_model.pth")["model"]
     task.load_state_dict(checkpoint, strict=False)
-
+    # return the model and task
     return model, task
 
 
 def load_sider():
-
+    """
+    It loads the SIDER pretrained model and task.
+    """
     # define the model
     model = models.GIN(
-        input_dim=69,
-        hidden_dims=[256, 256, 256, 256],
-        # edge_input_dim=11,
+        input_dim=22,
+        hidden_dims=[
+            512,
+            512,
+            512,
+            512,
+            512,
+            512,
+            512,
+            512
+        ],
+        edge_input_dim=11,
         num_mlp_layer=2,
         short_cut=False,
         batch_norm=True,
         concat_hidden=True,
-        # readout="mean",
+        readout="mean",
         activation="sigmoid"
         )
-
     # define the task"auroc"
     task = tasks.PropertyPrediction(
         model,
@@ -147,73 +171,100 @@ def load_sider():
     ],
         criterion="bce",
         metric=(
-            # "auprc",
             "auroc"
             )
         )
-
     # load the weights and task settings
     checkpoint = torch.load("models/sider/sider_model.pth")["model"]
     task.load_state_dict(checkpoint, strict=False)
-
+    # return the result
     return model, task
 
 
-def predict(graph, model, task, dataset) -> "dict":
-
+def predict(graph, model, task, dataset):
+    """
+    Given a graph, a model (among the ones in this file), a task, and a dataset,
+    it predicts the labels according to the model.
+    """
     # predict the ClinTox features of the retrieved molecule
     with torch.no_grad():
-
         model.eval()
         sample = data.graph_collate([{"graph": graph}])
         # print(sample)
         # print(sample["graph"].shape)
         # sample = utils.cuda(sample)
-
         pred = torch.sigmoid(task.predict(sample))
         # print(pred)
         # print(pred.shape)
         # print(pred[0][0].item())
-        # print(pred[0][1].item())
-
         if dataset == "clintox":
             pred = {
                 "FDA approval": round(pred[0][0].item()*100, 2),
                 "toxicity": round(pred[0][1].item()*100, 2)
             }
-
         elif dataset == "sider":
             pred = {
-            "Hepatobiliary disorders": round(pred[0][0].item()*100, 2),
-            "Metabolism & nutrition disorders": round(pred[0][1].item()*100, 2),
-            # "Product issues": round(pred[0][2].item()*100, 2),
-            "Eye disorders": round(pred[0][3].item()*100, 2),
-            # "Investigations": round(pred[0][4].item()*100, 2),
-            "Musculoskeletal & connective tissue disorders": round(pred[0][5].item()*100, 2),
-            "Gastrointestinal disorders": round(pred[0][6].item()*100, 2),
-            # "Social circumstances": round(pred[0][7].item()*100, 2),
-            "Immune system disorders": round(pred[0][8].item()*100, 2),
-            "Reproductive system & breast disorders": round(pred[0][9].item()*100, 2),
-            "Neoplasms benign, malignant & unspecified": round(pred[0][10].item()*100, 2),
-            # "General disorders & administration site conditions": round(pred[0][11].item()*100, 2),
-            "Endocrine disorders": round(pred[0][12].item()*100, 2),
-            "Surgical & medical procedures": round(pred[0][13].item()*100, 2),
-            "Vascular disorders": round(pred[0][14].item()*100, 2),
-            "Blood & lymphatic system disorders": round(pred[0][15].item()*100, 2),
-            "Skin & subcutaneous tissue disorders": round(pred[0][16].item()*100, 2),
-            "Congenital, familial & genetic disorders": round(pred[0][17].item()*100, 2),
-            "Infections & infestations": round(pred[0][18].item()*100, 2),
-            "Respiratory, thoracic & mediastinal disorders": round(pred[0][19].item()*100, 2),
-            "Psychiatric disorders": round(pred[0][20].item()*100, 2),
-            "Renal & urinary disorders": round(pred[0][21].item()*100, 2),
-            "Pregnancy, puerperium & perinatal conditions": round(pred[0][22].item()*100, 2),
-            "Ear & labyrinth disorders": round(pred[0][23].item()*100, 2),
-            "Cardiac disorders": round(pred[0][24].item()*100, 2),
-            "Nervous system disorders": round(pred[0][25].item()*100, 2),
-            "Injury, poisoning & procedural complications": round(pred[0][26].item()*100, 2)
+            "Nervous system disorders": round(pred[0][25].item()*100, 2),                               # 86.88
+            "Blood & lymphatic system disorders": round(pred[0][15].item()*100, 2),                     # 74.03
+            "Infections & infestations": round(pred[0][18].item()*100, 2),                              # 71.69
+            "Endocrine disorders": round(pred[0][12].item()*100, 2),                                    # 69.71
+            "Hepatobiliary disorders": round(pred[0][0].item()*100, 2),                                 # 69.32
+            "Reproductive system & breast disorders": round(pred[0][9].item()*100, 2),                  # 69.15
+            "Psychiatric disorders": round(pred[0][20].item()*100, 2),                                  # 69.06
+            # "Investigations": round(pred[0][4].item()*100, 2),                                        # 68.55
+            "Renal & urinary disorders": round(pred[0][21].item()*100, 2),                              # 68.09
+            "Vascular disorders": round(pred[0][14].item()*100, 2),                                     # 67.62
+            "Gastrointestinal disorders": round(pred[0][6].item()*100, 2),                              # 66.99
+            "Neoplasms benign, malignant & unspecified": round(pred[0][10].item()*100, 2),              # 66.74
+            "Eye disorders": round(pred[0][3].item()*100, 2),                                           # 65.04
+            "Product issues": round(pred[0][2].item()*100, 2),                                          # 65.00
+            # --------------------------------------
+            # "Musculoskeletal & connective tissue disorders": round(pred[0][5].item()*100, 2),         # 62.60
+            # "Metabolism & nutrition disorders": round(pred[0][1].item()*100, 2),                      # 61.39
+            # "Injury, poisoning & procedural complications": round(pred[0][26].item()*100, 2),         # 61.32
+            # "Cardiac disorders": round(pred[0][24].item()*100, 2),                                    # 60.22
+            # "Ear & labyrinth disorders": round(pred[0][23].item()*100, 2),                            # 60.11
+            # "Immune system disorders": round(pred[0][8].item()*100, 2),                               # 59.04
+            # "Social circumstances": round(pred[0][7].item()*100, 2),                                  # 58.02
+            # "General disorders & administration site conditions": round(pred[0][11].item()*100, 2),   # 60.68
+            # "Surgical & medical procedures": round(pred[0][13].item()*100, 2),                        # 50.11
+            # "Skin & subcutaneous tissue disorders": round(pred[0][16].item()*100, 2),                 # 50.03
+            # "Congenital, familial & genetic disorders": round(pred[0][17].item()*100, 2),             # 50.68
+            # "Respiratory, thoracic & mediastinal disorders": round(pred[0][19].item()*100, 2),        # 54.99
+            # "Pregnancy, puerperium & perinatal conditions": round(pred[0][22].item()*100, 2),         # 56.20
             }
-
         return pred
+
+
+def get_info_n_pred(key_mol, from_key=False):
+    """
+    A single function that wraps up all the process of the functions in this file
+    in order to make it easier to use the module.
+    """
+    if from_key:
+        # query the database
+        molecule = query(key_mol)
+    else:
+        molecule = key_mol
+    # extract the data
+    inchi, infos = extract_data(molecule)
+    # construct the molecules
+    graph_default = construct(inchi, pretrain=False)
+    graph_pretrain = construct(inchi, pretrain=True)
+    # load the models and tasks
+    clintox_model, clintox_task = load_clintox()
+    sider_model, sider_task = load_sider()
+    # get the predictions
+    clintox_pred = predict(graph_default, clintox_model, clintox_task, dataset="clintox")
+    sider_pred = predict(graph_pretrain, sider_model, sider_task, dataset="sider")
+    # return the prediction
+    return {
+        "infos": infos,
+        "graph": graph_default,
+        "clintox_pred": clintox_pred,
+        "sider_pred": sider_pred
+    }
+
 
 
 eval1 = False
@@ -224,22 +275,52 @@ if __name__ == "__main__":
     if eval1 == True:
         inchi, _ = query("aspirin")
         graph = construct(inchi)
-        model, task = load_clintox()
-        pred = predict(graph, model, task, "clintox")
-        print("\nClinTox:", pred)
+        # model, task = load_clintox()
+        # pred = predict(graph, model, task, "clintox")
+        # print("\nClinTox:", pred)
         model, task = load_sider()
         pred = predict(graph, model, task, "sider")
         print("\nSIDER:", pred)
 
     if eval2 == True:
-        from torchdrug import datasets
-        dataset = datasets.SIDER("./data/sider/")
+        # PLEASE IGNORE THIS MESS D:
+        dataset = datasets.SIDER(
+            "./models/data/sider/",
+            node_feature="pretrain",
+            edge_feature="pretrain"
+            )
+        # print(dataset[0]["graph"])
+        # quit()
         model, task = load_sider()
-        batch = data.graph_collate(dataset[:10])
-        pred = task.predict(batch)
+
+        # working code:
+        # batch = data.graph_collate(dataset[0:1])
+        # print(batch)
+        # print(type(batch))
+        # print(len(batch))
+        # pred = task.predict(batch)
+
+        # now fucking working code:
+        # graph = dataset[0]["graph"]
+        # batch = data.graph_collate([{"graph": graph}])
+        # print(batch)
+        # print(type(batch))
+        # print(len(batch))
+        # pred = task.predict(batch)
+
+        # now fucking working code:
+        mol, _ = query("aspirin", "smiles")
+        graph = construct(mol, "smiles")
+        batch = data.graph_collate([{"graph": graph}])
         print(batch)
+        print(type(batch))
+        print(len(batch))
+        pred = task.predict(batch)
+
         print(pred)
 
+
+# Junk code:
 
 # # plot the graph
 # import matplotlib
