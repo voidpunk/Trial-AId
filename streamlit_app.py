@@ -1,4 +1,3 @@
-from importlib_metadata import pypy_partial
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -180,7 +179,7 @@ st.write(
     an NIH website.
 
     The model is pre-trained with unsupervised deep-learning on 250,000 molecules from the ZINC250k dataset.
-    After which, it is trained on thousands of molecules on 3 datasets: ClinTox, SIDER, and BBBP.unsupervised
+    After which, it is trained on thousands of molecules on 3 datasets: ClinTox, SIDER, and BBBP.
     The model currently has a 90% accuracy on the ClinTox dataset,a 70% accuracy on selected tasks of the
     SIDER dataset (all the one shown), and a 90% accuracy on the BBBP dataset.
 
