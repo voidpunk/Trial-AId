@@ -222,7 +222,7 @@ def load_bbbp():
     return model, task
 
 
-def predict(graph, model, task, dataset, func="sigmoid"):
+def predict(graph, model, task, dataset, func="sigmoid", df=False):
     """
     Given a graph, a model (among the ones in this file), a task, and a dataset,
     it predicts the labels according to the model.
@@ -255,19 +255,19 @@ def predict(graph, model, task, dataset, func="sigmoid"):
             }
         elif dataset == "sider":
             pred = {
-            "Nervous system disorders": round(pred[0][25].item()*100, 2),                               # 86.88
-            "Blood & lymphatic system disorders": round(pred[0][15].item()*100, 2),                     # 74.03
+            "Neurologic": round(pred[0][25].item()*100, 2),                                             # 86.88
+            "Hematology": round(pred[0][15].item()*100, 2),                                             # 74.03
             "Infections & infestations": round(pred[0][18].item()*100, 2),                              # 71.69
-            "Endocrine disorders": round(pred[0][12].item()*100, 2),                                    # 69.71
-            "Hepatobiliary disorders": round(pred[0][0].item()*100, 2),                                 # 69.32
-            "Reproductive system & breast disorders": round(pred[0][9].item()*100, 2),                  # 69.15
-            "Psychiatric disorders": round(pred[0][20].item()*100, 2),                                  # 69.06
+            "Endocrine": round(pred[0][12].item()*100, 2),                                              # 69.71
+            "Hepatobiliary": round(pred[0][0].item()*100, 2),                                           # 69.32
+            "Reproductive": round(pred[0][9].item()*100, 2),                                            # 69.15
+            "Psychiatric": round(pred[0][20].item()*100, 2),                                            # 69.06
             # "Investigations": round(pred[0][4].item()*100, 2),                                        # 68.55
-            "Renal & urinary disorders": round(pred[0][21].item()*100, 2),                              # 68.09
-            "Vascular disorders": round(pred[0][14].item()*100, 2),                                     # 67.62
-            "Gastrointestinal disorders": round(pred[0][6].item()*100, 2),                              # 66.99
-            "Neoplasms benign, malignant & unspecified": round(pred[0][10].item()*100, 2),              # 66.74
-            "Eye disorders": round(pred[0][3].item()*100, 2),                                           # 65.04
+            "Urologic": round(pred[0][21].item()*100, 2),                                                # 68.09
+            "Gastroenterologic": round(pred[0][6].item()*100, 2),                                        # 66.99
+            "Vascular": round(pred[0][14].item()*100, 2),                                               # 67.62
+            "Oncologic": round(pred[0][10].item()*100, 2),                                              # 66.74
+            "Ophtalmic": round(pred[0][3].item()*100, 2),                                               # 65.04
             "Product issues": round(pred[0][2].item()*100, 2),                                          # 65.00
             # --------------------------------------
             # "Musculoskeletal & connective tissue disorders": round(pred[0][5].item()*100, 2),         # 62.60
@@ -288,7 +288,10 @@ def predict(graph, model, task, dataset, func="sigmoid"):
             pred = {
             "BBB penetration": round(pred[0][0].item()*100, 2),
             }
-        return pd.DataFrame.from_dict(pred, orient="index", columns=["score"])
+        if df:
+            return pd.DataFrame.from_dict(pred, orient="index", columns=["score"])
+        else:
+            return pred
 
 
 def get_info_n_pred(key_mol, from_key=False):

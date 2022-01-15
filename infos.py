@@ -30,20 +30,20 @@ def query(key):
     return search
 
 
-async def geocode_async(address):
+async def geocode_async(address, timeout=10):
 
     try:
         async with Bing(
             api_key="Amh-_uUK56C9ZaUCI63lVDVyJLRQGGOmgeNWVPrO0gu4YufXeCaNmOzOqmsZA-Vx",
             adapter_factory=AioHTTPAdapter
             ) as geolocator_bing:
-                location = await geolocator_bing.geocode(address)
+                location = await geolocator_bing.geocode(address, timeout=timeout)
         if location is None:
             async with Nominatim(
                 user_agent="Trial-AId",
                 adapter_factory=AioHTTPAdapter
                 ) as geolocator_nominatim:
-                location = await geolocator_nominatim.geocode(address)
+                location = await geolocator_nominatim.geocode(address, timeout=timeout)
         if location is None:
             return np.nan, np.nan
         else:
@@ -55,7 +55,7 @@ async def geocode_async(address):
                 user_agent="Trial-AId",
                 adapter_factory=AioHTTPAdapter
                 ) as geolocator_nominatim:
-                location = await geolocator_nominatim.geocode(address)
+                location = await geolocator_nominatim.geocode(address, timeout=timeout)
         if location is None:
             return np.nan, np.nan
         else:
@@ -67,7 +67,7 @@ async def geocode_async(address):
                 user_agent="Trial-AId",
                 adapter_factory=AioHTTPAdapter
                 ) as geolocator_nominatim:
-                location = await geolocator_nominatim.geocode(address)
+                location = await geolocator_nominatim.geocode(address, timeout=timeout)
         if location is None:
             return np.nan, np.nan
         else:
@@ -76,11 +76,17 @@ async def geocode_async(address):
     except geopy.exc.GeocoderRateLimited as e:
         print(e)
         sleep(10)
-        geocode(address)
+        geocode_async(address, timeout=timeout+10)
 
     except geopy.exc.GeocoderTimedOut as e:
         print(e)
-        geocode_async(address)
+        sleep(10)
+        geocode_async(address, timeout=timeout+10)
+
+    except ImportError as e:
+        print(e)
+        sleep(10)
+        geocode_async(address, timeout=timeout+10)
 
 
 def geocode(address):
@@ -190,8 +196,6 @@ if __name__ == "__main__":
     t2 = time() - t1
     print(df)
     print(t2)
-    # print(type(df.Longitude.values[0]))
-
 
 
 # import json
