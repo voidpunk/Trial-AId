@@ -1,4 +1,3 @@
-from numpy import product
 import streamlit as st
 import plotly.express as px
 import pydeck as pdk
