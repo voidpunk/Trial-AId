@@ -54,28 +54,38 @@ def model_section(molecule):
 
     st.write("----------------------------------------------------------------")
 
-    col1, col2, col_empty, col3 = st.columns((3, 2, 1, 5))
-    col1.write("")
-    col1.markdown("**Data from database**")
-    col1.write("First approval:")
-    col1.write("Oral:")
-    col1.write("Parenteral:")
-    col1.write("Topical:")
-    col1.write("Natural product:")
-    col1.write("Indication class:")
-    col2.write("")
-    col2.markdown("**Values**")
-    col2.write(f"<code>{infos['first_approval']}</code>", unsafe_allow_html=True)
-    col2.write(f"<code>{infos['oral']}</code>", unsafe_allow_html=True)
-    col2.write(f"<code>{infos['parenteral']}</code>", unsafe_allow_html=True)
-    col2.write(f"<code>{infos['topical']}</code>", unsafe_allow_html=True)
-    col2.write(f"<code>{infos['natural_product']}</code>", unsafe_allow_html=True)
-    col2.write(f"<code>{infos['indication_class']}</code>", unsafe_allow_html=True)
+    col1, col3 = st.columns(2)
+    col1.write(
+        f"""
+        <div style="display: flex;">
+            <div style="flex: 50%;">
+                <p><b>Data from database:</b></p>
+                <p>First approval:</p>
+                <p>Oral:</p>
+                <p>Parenteral:</p>
+                <p>Topical:</p>
+                <p>Natural product:</p>
+                <p>Indication class:</p>
+            </div>
+            <div style="flex: 50%;">
+                <p><b>Values</b></p>
+                <p><code>{infos["first_approval"]}</code></p>
+                <p><code>{infos["oral"]}</code></p>
+                <p><code>{infos["parenteral"]}</code></p>
+                <p><code>{infos["topical"]}</code></p>
+                <p><code>{infos["natural_product"]}</code></p>
+                <p><code>{infos["indication_class"]}</code></p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     col3.image(
         "graph.png",
         caption="Computer-reconstructed molecule shape",
         use_column_width=True
         )
+
 
     st.write("----------------------------------------------------------------")
 
@@ -100,6 +110,7 @@ def model_section(molecule):
                 orient="index",
                 columns=["score"]
             ),
+            color_discrete_sequence=["#23bb52"],
             width=250,
         ).update_layout(
             yaxis=dict(range=[0, 100])
@@ -128,6 +139,7 @@ def model_section(molecule):
                 orient="index",
                 columns=["score"]
             ),
+            color_discrete_sequence=["#ff4b4b"],
             width=250,
         ).update_layout(
             yaxis=dict(range=[0, 100])
@@ -211,6 +223,7 @@ def model_section(molecule):
             orient="index",
             columns=["score"]
         ),
+        color_discrete_sequence=["#ff4b4b"],
         width=250,
     ).update_layout(
         yaxis=dict(range=[0, 100])
@@ -282,15 +295,18 @@ def intro():
     st.title("Trial AId")
     st.write(
         """
-        Currently all the pieces of information provided to the subjects involved in clinical trials come from the
-        preclinical phase on animal models. Often they are not enough detailed or accurate to reliably inform the patients
+        <p style="text-align: justify;">
+        Currently all the pieces of information provided to the subjects involved in clinical trials come from the 
+        preclinical phase on animal models. Often they are not enough detailed or accurate to reliably inform the patients 
         about all the possible outcomes of the experimental treatment which the subject is going to receive.
-
-        This is where Trial AId comes: it is an AI-powered tool that aims at providing more detailed information to the
-        patient about the possible outcomes of the clinical trial, in order to ***aid*** more informed decisions when
-        choosing to participate to a ***trial***. This is possible thanks to a deep learning algorithm trained on hundreds
+        <br><br>
+        This is where Trial AId comes: it is an AI-powered tool that aims at providing more detailed information to the 
+        patient about the possible outcomes of the clinical trial, in order to ***aid*** more informed decisions when 
+        choosing to participate to a ***trial***. This is possible thanks to a deep learning algorithm trained on hundreds 
         of thousands of molecular structures and their corresponding properties and interactions.
-        """
+        </p>
+        """,
+        unsafe_allow_html=True
     )
     st.header("Model")
 
@@ -300,25 +316,30 @@ def about():
     st.header("About")
     st.write(
         """
-        Trial AId is based on the powerful Torchdrug library (written upon PyTorch) and the extensive ChEMBL database,
-        containing more than 2.1 milions of chemical compounds. The clinical trials data is retrieved from ClinicalTrials.gov,
+        <p style="text-align: justify;">
+        Trial AId is based on the powerful Torchdrug library (written upon PyTorch) and the extensive ChEMBL database, 
+        containing more than 2.1 milions of chemical compounds. The clinical trials data is retrieved from ClinicalTrials.gov, 
         an NIH website.
-
         The model is pre-trained with unsupervised deep-learning on 250,000 molecules from the ZINC250k dataset.
         After which, it is trained on thousands of molecules on 3 datasets: ClinTox, SIDER, and BBBP.
-        The model currently has a 90% accuracy on the ClinTox dataset,a 70% accuracy on selected tasks of the
-        SIDER dataset (all the one shown), and a 90% accuracy on the BBBP dataset.
-
-        The next goal is to pre-train the model on 2 million molecules from the ZINC2M dataset, to improve the overall
-        performance of the model, and to train the side-effect prediction model jointly on the SIDER, OFFSIDES, MEDEFFECT,
+        <br>
+        Currently the model has a 90% accuracy on the ClinTox dataset,a 70% accuracy on selected tasks of the SIDER 
+        dataset (all the one shown), and a 90% accuracy on the BBBP dataset.
+        <br><br>
+        The next goals are to pre-train the model on 2 million molecules from the ZINC2M dataset, to improve the overall 
+        performance of the model, and to train the side-effect prediction model jointly on the SIDER, OFFSIDES, MEDEFFECT, 
         and FAERS datasets to greatly improve the accuracy of this model.
-        """
+        Currently I'm working on the FAERS dataset, the biggest dataset of drug side-effects, provided by the FDA.
+        <br><br>
+        </p>
+        """,
+        unsafe_allow_html=True
     )
 
 
 def footer():
 
-    st.write("Want to contribute? Great! Check out the Github repository:")
+    st.write("Want to contribute? Great!<br>Check out the Github repository:", unsafe_allow_html=True)
     st.write(
         """
         <div align="center">
@@ -401,8 +422,8 @@ def main():
             # run the model section
             model_section(molecule)
             # run the info section
-            with st.spinner("Travelling the world searching for your trials..."):
-                info_section(key)
+            # with st.spinner("Travelling the world searching for your trials..."):
+            #     info_section(key)
         t1 = time()
         # benchmark log
         print(f"Time: {t1 - t0}s")
