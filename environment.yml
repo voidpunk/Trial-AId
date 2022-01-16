@@ -3,6 +3,7 @@ channels:
   - milagraph
   - pyg
   - pytorch
+  - mcs07
   - plotly
   - conda-forge
   - defaults
@@ -165,6 +166,7 @@ dependencies:
   - protobuf=3.14.0=py38h709712a_1
   - pthread-stubs=0.4=h36c2ea0_1001
   - ptyprocess=0.7.0=pyhd3deb0d_0
+  - pubchempy=1.0.4=py_3
   - pyarrow=2.0.0=py38h842ea0c_15_cpu
   - pycairo=1.20.1=py38hf61ee4a_1
   - pycparser=2.21=pyhd8ed1ab_0
