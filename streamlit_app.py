@@ -301,14 +301,14 @@ def intro():
         """
         <p style="text-align: justify;">
         Currently all the pieces of information provided to the subjects involved in clinical trials come from the 
-        preclinical phase on animal models. Often they are not enough detailed or accurate to reliably inform the patients 
-        about all the possible outcomes of the experimental treatment which the subject is going to receive.
+        preclinical phase on in vitro and animal models. Often they are not enough detailed or accurate to reliably 
+        inform the patients about all the possible outcomes of the experimental treatment they are going going to 
+        receive.
         <br><br>
-        This is where Trial AId comes: it is an AI-powered tool that aims at providing more detailed information to the 
-        patient about the possible outcomes of the clinical trial, in order to <b style="font-size: 1.1em">aid</b> more 
-        informed decisions when choosing to participate to a <b style="font-size: 1.1em">trial</b>. This is possible 
-        thanks to a deep learning algorithm trained on hundreds of thousands of molecular structures and their 
-        corresponding properties and interactions.
+        This is where Trial AId comes: it is an AI-powered tool that aims at providing more detailed and reliable 
+        information to the patient about the possible outcomes of the clinical <b>trial</b>, in order to <b>aid</b> 
+        more informed decisions when choosing to participate to a trial. This is possible thanks to a deep learning 
+        algorithm trained on hundreds of thousands of molecules, their properties and interactions.
         </p>
         """,
         unsafe_allow_html=True
@@ -417,7 +417,7 @@ def main():
     key = st.text_input(
         label="ENTER THE MOLECULE NAME:",
         # value="amoxicillin",
-        placeholder="amoxicillin",
+        placeholder="e.g. amoxicillin",
         # autocomplete="on",
 
         )
