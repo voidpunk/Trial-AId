@@ -397,7 +397,7 @@ def footer():
         """
         <div align="right">
             <p>
-                Trial-AId v0.2.0
+                Trial-AId v0.2.2
                 <br>
                 Nil
                 <i>&#64voidpunk</i>
