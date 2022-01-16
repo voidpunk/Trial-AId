@@ -37,6 +37,8 @@ def infos_cleaner(infos):
         infos["topical"] = "Yes"
     elif infos["topical"] == 0:
         infos["topical"] = "No"
+    infos["pref_name"] = infos["pref_name"].capitalize()
+    infos["indication_class"] = infos["indication_class"].replace(";", ",")
     return infos
 
 
@@ -60,6 +62,7 @@ def model_section(molecule):
         <div style="display: flex;">
             <div style="flex: 50%;">
                 <p><b>Data from database:</b></p>
+                <p>Name:</p>
                 <p>First approval:</p>
                 <p>Oral:</p>
                 <p>Parenteral:</p>
@@ -69,6 +72,7 @@ def model_section(molecule):
             </div>
             <div style="flex: 50%;">
                 <p><b>Values</b></p>
+                <p><code>{infos["pref_name"]}</code></p>
                 <p><code>{infos["first_approval"]}</code></p>
                 <p><code>{infos["oral"]}</code></p>
                 <p><code>{infos["parenteral"]}</code></p>
@@ -318,19 +322,21 @@ def about():
     st.write(
         """
         <p style="text-align: justify;">
-        Trial AId is based on the powerful Torchdrug library (written upon PyTorch) and the extensive ChEMBL database, 
-        containing more than 2.1 milions of chemical compounds. The clinical trials data is retrieved from ClinicalTrials.gov, 
-        an NIH website.
+        Trial AId is based on the powerful Torchdrug library (written upon PyTorch) and two enormous databases: 
+        PubChem (110+ millions of compounds) and ChEMBL (2.1+ millions of compounds). 
+        The clinical trials data is retrieved from ClinicalTrials.gov (400,000+ studies from 220 countries).
+        <br>
         The model is pre-trained with unsupervised deep-learning on 250,000 molecules from the ZINC250k dataset.
-        After which, it is trained on thousands of molecules on 3 datasets: ClinTox, SIDER, and BBBP.
+        After that, it is specifically trained on thousands of molecules on 3 datasets: ClinTox, SIDER, and BBBP.
         <br>
         Currently the model has a 90% accuracy on the ClinTox dataset,a 70% accuracy on selected tasks of the SIDER 
         dataset (all the one shown), and a 90% accuracy on the BBBP dataset.
         <br><br>
-        The next goals are to pre-train the model on 2 million molecules from the ZINC2M dataset, to improve the overall 
-        performance of the model, and to train the side-effect prediction model jointly on the SIDER, OFFSIDES, MEDEFFECT, 
-        and FAERS datasets to greatly improve the accuracy of this model.
-        Currently I'm working on the FAERS dataset, the biggest dataset of drug side-effects, provided by the FDA.
+        The next goals are to pre-train the model on 2 million molecules from the ZINC2M dataset, to improve the 
+        overall performance of the model, and to train the side-effect prediction model jointly on the SIDER, OFFSIDES, 
+        MEDEFFECT, and FAERS datasets to greatly improve the accuracy of this model.
+        Currently I am working on elaborating the FAERS dataset, the biggest dataset of drug side-effects, provided by 
+        the FDA.
         <br><br>
         </p>
         """,
@@ -406,11 +412,54 @@ def footer():
 
 def main():
     intro()
-    key = st.text_input("Enter the molecule name:")
+    # col1, col2 = st.columns((5, 1))
+    # st.write("Enter the molecule name:")
+    key = st.text_input(
+        label="ENTER THE MOLECULE NAME:",
+        # value="amoxicillin",
+        placeholder="amoxicillin",
+        # autocomplete="on",
+
+        )
+    # col2.write("<br>", unsafe_allow_html=True)
+    with st.expander("Accepted formats"):
+        st.write(
+            """
+            <p>
+            market name (e.g. "aspirin")
+            <br>
+            molecule name (e.g. "acetylsalicylic acid")
+            <br>
+            PubChem CID (e.g. "2244")
+            <br>
+            ChEMBL ID (e.g. "CHEMBL25")
+            <br>
+            SMILES (e.g. "CC(=O)Oc1ccccc1C(=O)O")
+            <br>
+            InChI key (e.g. "BSYNRYMUTXBXSQ-UHFFFAOYSA-N")
+            <br>
+            formula (e.g. "C9H8O4")
+            <br>
+            InChI (e.g. "InChI=1S/C9H8O4/c1-6(10)13-8-5-3-2-4-7(8)9(11)12/h2-5H,1H3,(H,11,12)")
+            <br>
+            <br>
+            N.B.:
+            <br>
+            1. searching an InChI takes a bit longer
+            <br>
+            2. InChI and InChI key are case sensitive
+            <br>
+            3. formula is not unique, so it is not as reliable as the other identifiers
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
+    key = key.strip()
     if key != "":
         t0 = time()
         # query ChEMBL database
-        molecule = query(key)
+        with st.spinner("Searching through more than 110 million compounds..."):
+            molecule = query(key)
         # easter egg and dedication
         if key == "Charlie":
             st.info("Hello honey <3")

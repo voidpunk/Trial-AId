@@ -1,4 +1,6 @@
+from argon2 import PasswordHasher
 from chembl_webresource_client.new_client import new_client
+import pubchempy as pcp
 import torch
 from torchdrug import data, models, tasks, datasets, utils
 from rdkit import Chem
@@ -6,15 +8,85 @@ import pandas as pd
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+
 def query(key):
-    """
-    Query the ChEMBL database for a molecule and returns it and its infos as a dictionary.
-    if found, else it returns None.
-    """
-    molecule = new_client.molecule\
-        .filter(molecule_synonyms__molecule_synonym__iexact=key)[0]
+    client = new_client.molecule
+    # sure checks:
+    key = key.strip().replace('"', '').replace("'", "")
+    if key[:6].upper() == "CHEMBL":
+        molecule = client.filter(chembl_id=key)[0]
+    elif key[:7].lower() == "inchi=":
+        inchikey = pcp.get_compounds(key, namespace="inchi")[0].inchikey
+        molecule = client.filter(molecule_structures__standard_inchi_key=inchikey)[0]
+    elif key.isdigit():
+        compounds = pcp.get_compounds(int(key), namespace="cid")
+        inchikey = compounds[0].inchikey
+        molecule = client.filter(molecule_structures__standard_inchi_key=inchikey)[0]
+    elif key[:5].lower() == "key:":
+        key_mod = key[4:]
+        molecule = client.filter(molecule_structures__standard_inchi_key=key_mod)[0]
+    else:
+        try:
+            # unsure checks:
+            try:
+                compounds = pcp.get_compounds(key, namespace="name")
+            except pcp.BadRequestError:
+                print("\nNAME\n")
+                pass
+            if len(compounds) == 0:
+                try:
+                    compounds = pcp.get_compounds(key, namespace="smiles")
+                except pcp.BadRequestError:
+                    print("\nSMILES\n")
+                    pass
+            if len(compounds) == 0:
+                try:
+                    compounds = pcp.get_compounds(key, namespace="inchikey")
+                except pcp.BadRequestError as e:
+                    print("\nINCHIKEY\n")
+                    print(e)
+                    pass
+            if len(compounds) == 0:
+                try:
+                    compounds = pcp.get_compounds(key, namespace="formula")
+                except pcp.BadRequestError:
+                    print("\nFORMULA\n")
+                    pass
+            if len(compounds) == 0:
+                try:
+                    compounds = pcp.get_compounds(key, namespace="inchi")
+                except pcp.BadRequestError as e:
+                    print("\nINCHI\n")
+                    print(e)
+                    pass
+            # if len(compounds) == 0:
+            #     # not working and I don't know why
+            #     try:
+            #         key_mod = f"InChI={key}"
+            #         compounds = pcp.get_compounds(key_mod, namespace="inchi")
+            #     except pcp.BadRequestError as e:
+            #         print("\nINCHI2\n")
+            #         print(e)
+            #         pass
+            if len(compounds) != 0:
+                inchikey = compounds[0].inchikey
+                molecule = client.filter(molecule_structures__standard_inchi_key=inchikey)[0]
+            else:
+                molecule = None
+        except pcp.TimeoutError:
+            molecule = None
+    # last check:
     if molecule is None:
-        return None
+        molecule = client.filter(molecule_synonyms__molecule_synonym__iexact=key)[0]
+        print("\nNAME2\n")
+        if molecule is None:
+            molecule = client.filter(molecule_structures__standard_inchi_key=key)[0]
+            print("\nINCHIKEY2\n")
+        if molecule is None:
+            molecule = client.filter(smiles=key, similarity=70)[0]
+            print("\nSMILES2\n")
+        if molecule is None:
+            return None
     else:
         return molecule
 
@@ -35,6 +107,7 @@ def extract_data(molecule, type="inchi"):
     oral = molecule["oral"]
     parenteral = molecule["parenteral"]
     topical = molecule["topical"]
+    pref_name = molecule["pref_name"]
     # organize the infos
     infos = {
         "first_approval": first_approval,
@@ -43,7 +116,8 @@ def extract_data(molecule, type="inchi"):
         "natural_product": natural_product,
         "oral": oral,
         "parenteral": parenteral,
-        "topical": topical
+        "topical": topical,
+        "pref_name": pref_name
     }
     # return the infos
     if type == "smiles":
