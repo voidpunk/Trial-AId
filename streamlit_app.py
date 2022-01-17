@@ -419,7 +419,6 @@ def main():
         # value="amoxicillin",
         placeholder="e.g. amoxicillin",
         # autocomplete="on",
-
         )
     # col2.write("<br>", unsafe_allow_html=True)
     with st.expander("Accepted formats"):
@@ -472,8 +471,8 @@ def main():
             # run the model section
             model_section(molecule)
             # run the info section
-            # with st.spinner("Travelling the world searching for your trials..."):
-            #     info_section(key)
+            with st.spinner("Travelling the world searching for your trials..."):
+                info_section(key)
         t1 = time()
         # benchmark log
         print(f"Time: {t1 - t0}s")
