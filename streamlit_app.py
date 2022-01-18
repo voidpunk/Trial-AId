@@ -3,8 +3,9 @@ import plotly.express as px
 import pydeck as pdk
 import pandas as pd
 from model import query, get_info_n_pred
-from infos import get_info_async
+from infos import get_info_async, gather_data, TELEGRAM_API_KEY
 from time import time
+from PIL import Image
 
 
 def textlayer_cleaner(df):
@@ -86,7 +87,7 @@ def model_section(molecule):
     )
     col3.image(
         "graph.png",
-        caption="Computer-reconstructed molecule shape",
+        caption="Real time computer-reconstructed molecule shape",
         use_column_width=True
         )
 
@@ -97,25 +98,41 @@ def model_section(molecule):
     col1.subheader("FDA approval")
     col1.write(
         """
-        This measure estimates the likelihood of the molecule to be approved by 
-        the FDA.
+        This measure estimates the likelihood of the drug to be approved by the FDA.
         """
     )
-    col1.write("<br>", unsafe_allow_html=True)
+    # col1.write("<br>", unsafe_allow_html=True)
     if clintox["FDA approval"] < 50:
         col1.error("⚠️ Probably it won't be approved by FDA!")
     else:
         col1.success("✅ Probably it will be approved by FDA!")
+    with col1.expander("More info:"):
+        st.write(
+            """
+            <p style="text-align: justify;">
+            FDA approval of a drug means that data on the drug's effects have been reviewed by CDER, and the drug is 
+            determined to provide benefits that outweigh its known and potential risks for the intended population.
+            <br><br>
+            At the moment, the model precision for this measeure evaluate as >90%.
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
     col2.plotly_chart(
         px.bar(
-            pd.DataFrame.from_dict({
-                "FDA approval": clintox["FDA approval"]
+            pd.DataFrame({
+                "y": clintox["FDA approval"],
+                "": 0
                 },
-                orient="index",
-                columns=["score"]
+                index=[""]
             ),
+            y="y",
             color_discrete_sequence=["#23bb52"],
             width=250,
+            labels={
+                "y": "Probability (%)",
+                "index": "FDA approval",
+                },
         ).update_layout(
             yaxis=dict(range=[0, 100])
             )
@@ -127,24 +144,41 @@ def model_section(molecule):
     col1.subheader("Toxicity score")
     col1.write(
         """
-        This measure estimates the likelihood of the molecule to be toxic.
+        This measure estimates the likelihood of the drug to be toxic.
         """
     )
-    col1.write("<br>", unsafe_allow_html=True)
+    # col1.write("<br>", unsafe_allow_html=True)
     if clintox["toxicity"] > 50:
         col1.error("⚠️ Probably the molecule is toxic!")
     else:
         col1.success("✅ Probably the molecule isn't toxic!")
+    with col1.expander("More info:"):
+        st.write(
+            """
+            <p style="text-align: justify;">
+            Drug toxicity can be defined as a diverse array of adverse effects which are brought about through drug 
+            use at either therapeutic or non-therapeutic doses.
+            <br><br>
+            At the moment, the model precision for this measeure evaluate as >90%.
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
     col2.plotly_chart(
         px.bar(
-            pd.DataFrame.from_dict({
-                "Toxicity": clintox["toxicity"]
+            pd.DataFrame({
+                "y": clintox["toxicity"],
+                "": 0
                 },
-                orient="index",
-                columns=["score"]
+                index=[""]
             ),
+            y="y",
             color_discrete_sequence=["#ff4b4b"],
             width=250,
+            labels={
+                "y": "Probability (%)",
+                "index": "Toxicity",
+                },
         ).update_layout(
             yaxis=dict(range=[0, 100])
             )
@@ -155,10 +189,28 @@ def model_section(molecule):
     st.subheader("Side effects")
     st.write(
         """
-        This measures estimate the likelihood of the molecule to cause 
-        different side on different body systems.
+        This measures estimate the likelihood of the drug to cause different types of side effects on different body 
+        systems or of different kinds.
         """
     )
+    with st.expander("More info:"):
+        st.write(
+            """
+            <p style="text-align: justify;">
+            A side effect is usually regarded as an undesirable secondary effect which occurs in addition to the 
+            desired therapeutic effect of a drug or medication. Side effects may vary for each individual depending 
+            on the person's disease state, age, weight, gender, ethnicity and general health.
+            <br><br>
+            Side effects can occur when commencing, decreasing/increasing dosages, or ending a drug or medication 
+            regimen. Side effects may also lead to non-compliance with prescribed treatment. When side effects of a 
+            drug or medication are severe, the dosage may be adjusted or a second medication may be prescribed. 
+            Lifestyle or dietary changes may also help to minimize side effects.
+            <br><br>
+            At the moment, the model precision for this measeure evaluate as ~70%.
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
     sider_df = pd.DataFrame.from_dict(
                 sider,
                 orient="index",
@@ -172,18 +224,39 @@ def model_section(molecule):
             x="score",
             orientation="h",
             color="score",
-            height=600
+            height=600,
+            labels={
+                "index": "Side effects",
+                "score": "Prediction (%)",
+                },
+            title="Probability",
         ).update_layout(
             xaxis=dict(range=[0, 100])
             ),
         use_container_width=True
     )
+    st.write(
+        """
+        <p style="text-align: justify;">
+        The <b>probability</b> measures the likelihood (as percentage) of the drug's side effects to affect a specific 
+        system of the body or to represent a specific kind of problem (indicated by the main medical specialty involved).
+        <br><br>
+        The <b>distribution</b> of probability shows how the adverse effects are distributed among the different body 
+        systems or medical specialties, to give a better understanding of the overall adverse effects' distribution.
+        """,
+        unsafe_allow_html=True
+        )
     st.plotly_chart(
         px.pie(
             sider_df,
             values="score",
             names=sider_df.index,
             height=500,
+            labels={
+                "index": "Side effects",
+                "score": "Prediction (%)",
+                },
+            title="Distribution",
         ),
         use_container_width=True
     )
@@ -194,11 +267,24 @@ def model_section(molecule):
     col1.subheader("BBB penetration")
     col1.write(
         """
-        This measure estimates the likelihood of the molecule to penetrate the
-        blood-brain barrier (BBB).
+        This measure estimates the likelihood of the molecule to penetrate the blood-brain barrier.
         """
     )
-    col2.write("<br><br>", unsafe_allow_html=True)
+    # col2.write("<br><br>", unsafe_allow_html=True)
+    with col1.expander("More info:"):
+        st.write(
+            """
+            <p style="text-align: justify;">
+            The blood-brain barrier (BBB) prevents entry into the brain of most drugs from the blood. The presence of 
+            the BBB, is a double-edged sword: it prevents the drug from entering the brain, thus protecting it from 
+            toxic substances, but it also makes difficult the development of new treatments of brain diseases, since 
+            they have to cross the BBB to reach and treat the brain.
+            <br><br>
+            At the moment, the model precision for this measeure evaluate as >90%.
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
     if bbbp["BBB penetration"]:
         col2.error("⚠️ Probably it will pass the BBB!")
     else:
@@ -210,8 +296,7 @@ def model_section(molecule):
     col1.subheader("Product issues")
     col1.write(
         """
-        This measure estimates the likelihood of the molecule to be involved in 
-        post-marketing product issues.
+        This measure estimates the likelihood of the molecule to be involved in post-marketing product issues.
         """
     )
     col1.write("<br>", unsafe_allow_html=True)
@@ -219,16 +304,34 @@ def model_section(molecule):
         col1.error("⚠️ Probably it will give product issues!")
     else:
         col1.success("✅ Probably it won't give product issues!")
+    with col1.expander("More info:"):
+        st.write(
+            """
+            <p style="text-align: justify;">
+            Product issues concern the quality, authenticity,or safety of any medication. Problems with product quality 
+            may occur during manufacturing, shipping, or storage. They include: counterfeit product, product contamination, 
+            poor packaging or product mix-up, questionable stability, labeling concerns.
+            <br><br>
+            At the moment, the model precision for this measeure evaluate as ~70%.
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
     col2.plotly_chart(
     px.bar(
-        pd.DataFrame.from_dict({
-            "Product issues": product_issues
+        pd.DataFrame({
+            "y": product_issues,
+            "": 0
             },
-            orient="index",
-            columns=["score"]
+            index=[""]
         ),
+        y="y",
         color_discrete_sequence=["#ff4b4b"],
         width=250,
+        labels={
+            "y": "Probability %",
+            "index": "Product issues",
+            }
     ).update_layout(
         yaxis=dict(range=[0, 100])
         )
@@ -238,15 +341,31 @@ def model_section(molecule):
 
 
 def info_section(key):
+    global data_collection, TELEGRAM_API_KEY
 
     st.header("Infos")
-    df = textlayer_cleaner(get_info_async(key))
+    st.write(
+        """
+        <p style="text-align: justify;">
+        Here you can take a look at the available trials for the searched drug which are recruting or will recruting 
+        around the globe.
+        <br>
+        Use the mouse wheel on the map to zoom in and out, and hover the cursor over red dots to see the name of the 
+        location. Below the map you can see the trials' information. Click on the title to go to the official 
+        ClinicalTrials.gov website and see all the details about the trial.
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
+    df, df_complete = get_info_async(key)
+    df = textlayer_cleaner(df)
     # df_red = df[df["OverallStatus"] == "Recruiting"]
     # df_yellow = df[df["OverallStatus"] == "Not yet recruiting"]
 
     st.pydeck_chart(
         pdk.Deck(
             map_style="mapbox://styles/mapbox/light-v9",
+            # map_style="mapbox://styles/mapbox/dark-v10",
             # initial_view_state=pdk.ViewState(
             #     pitch=45
             # ),
@@ -276,7 +395,21 @@ def info_section(key):
         )
     )
 
-    # st.write("----------------------------------------------------------------")
+    # with open(f"trials/{key}.csv", "w") as f:
+    #     df.drop(["Rank"], axis=1).to_csv(f, index=False)
+    col_e1, col, col_e2 = st.columns((1, 4, 1))
+    csv = save_df(df_complete)
+    download = col.download_button(
+        "Download trials as CSV (compatible with Excel & LibreOffice)",
+        data=csv,
+        file_name=f"{key}.csv",
+        mime="csv"
+        )
+    if data_collection and download:
+        gather_data(key, TELEGRAM_API_KEY, download)
+
+
+    st.write("----------------------------------------------------------------")
 
     # Show user table
     columns = st.columns((1, 1, 3))
@@ -286,17 +419,30 @@ def info_section(key):
         col.write(field_name)
     for x, _ in enumerate(range(len(df))):
         col1, col2, col3 = st.columns((1, 1, 3))
-        col1.write(f"[{df.OfficialTitle[x]}]({df.Link[x]})")
+        # clean text
+        df.BriefTitle = df.BriefTitle.str.replace("/", " / ")
+        df.BriefSummary = df.BriefSummary.str.replace(r"|", "\n")
+        # columns
+        col1.write(f"[{df.BriefTitle[x]}]({df.Link[x]})")
         col2.write(df["OverallStatus"][x])
         col2.write("Trial starts on:\n")
         col2.write(df["StartDate"][x])
-        col3.write(df["BriefSummary"][x])
+        col3.write(f"""<p style="text-align: justify;">{df["BriefSummary"][x]}</p>""", unsafe_allow_html=True)
         st.write("------------------------------------------------------------")
+
+
+@st.cache
+def save_df(df):
+    df = df.drop(["Rank"], axis=1).to_csv(index=False).encode('utf-8')
+    return df
 
 
 def intro():
 
-    st.title("Trial AId")
+    image = Image.open("./logo_transparent.png")
+    st.image(image, use_column_width="auto")
+    # st.title("Trial AId")
+    st.write("")
     st.write(
         """
         <p style="text-align: justify;">
@@ -361,23 +507,27 @@ def footer():
     torchdrug_logo = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MDAiIGhlaWdodD0iNTAwIiB2aWV3Qm94PSIwIDAgNTAwIDUwMCI+CiAgPG1ldGFkYXRhPjw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+Cjx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMTQyIDc5LjE2MDkyNCwgMjAxNy8wNy8xMy0wMTowNjozOSAgICAgICAgIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIvPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgCjw/eHBhY2tldCBlbmQ9InciPz48L21ldGFkYXRhPgo8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmNscy0xIHsKICAgICAgICBmaWxsOiBub25lOwogICAgICAgIHN0cm9rZTogI2U1MjYxZjsKICAgICAgICBzdHJva2Utd2lkdGg6IDQ1cHg7CiAgICAgIH0KCiAgICAgIC5jbHMtMSwgLmNscy0yIHsKICAgICAgICBmaWxsLXJ1bGU6IGV2ZW5vZGQ7CiAgICAgIH0KCiAgICAgIC5jbHMtMiB7CiAgICAgICAgZmlsbDogIzJmMmY0MTsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPHBhdGggaWQ9IuWkmui+ueW9ol8xIiBkYXRhLW5hbWU9IuWkmui+ueW9oiAxIiBjbGFzcz0iY2xzLTEiIGQ9Ik0yNTAuNSwyN0w0NDMuOTk0LDEzOC41djIyM0wyNTAuNSw0NzMsNTcuMDA2LDM2MS41di0yMjNaIi8+CiAgPHBhdGggaWQ9IkQiIGNsYXNzPSJjbHMtMiIgZD0iTTIxOS45LDE1MS4wNHEtMTIuNzQ0LjI4Mi0yMi44MiwwLjU2LTExLjc2LjI4Mi0yMy42Ni0uMTR0LTE4LjktLjd2NS42cTguNjc2LDAuMjgyLDEzLjMsMi4xYTEwLjEwNiwxMC4xMDYsMCwwLDEsNi4xNiw2LjcycTEuNTM2LDQuOSwxLjU0LDE1LjI2VjMxOS4zMnEwLDEwLjA4LTEuNTQsMTUuMTJhOS43MzksOS43MzksMCwwLDEtNi4wMiw2LjcycS00LjQ4MiwxLjY4LTEzLjQ0LDIuMjRWMzQ5cTctLjU1OCwxOC45LTAuN3QyNC4yMi0uMTRxOS4yNCwwLDIxLjcuNDJUMjM4LjUyLDM0OXEzNSwwLDYwLjA2LTEyLjZ0MzguMjItMzUuNDJxMTMuMTU4LTIyLjgxOCwxMy4xNi01My4zNCwwLTQ2Ljc1OC0yNi44OC03MS44MnQtODIuMDQtMjUuMDZRMjMyLjY0LDE1MC43NiwyMTkuOSwxNTEuMDRabTY5LjAyLDI3LjcycTE0LjU1NiwyMi45NjIsMTQuNTYsNzAsMCwzMC41MjItNS44OCw1MS44VDI3OC4xNCwzMzIuOXEtMTMuNTg0LDExLjA2NC0zNy4xLDExLjA2LTEyLjg4MiwwLTE2Ljk0LTQuNzZ0LTQuMDYtMTkuMzJ2LTE0MHEwLTE0LjU1NiwzLjkyLTE5LjMydDE2LjgtNC43NlEyNzQuMzYsMTU1LjgsMjg4LjkyLDE3OC43NloiLz4KPC9zdmc+Cg=="
     chembl_shield = "https://img.shields.io/badge/chembl-grey.svg?&style=for-the-badge"
     pytrials_shield = "https://img.shields.io/badge/pytrials-grey.svg?&style=for-the-badge"
+    pubchempy_shield = "https://img.shields.io/badge/pubchempy-grey.svg?&style=for-the-badge"
 
     st.write("Made with:")
     # st.markdown(f"![]({torchdrug_base}{torchdrug_logo})")https://torchdrug.ai/
     st.write(
         """
         <div align="center">
-            <a href="https://github.com/voidpunk/pytrials" style="text-decoration: none;">
-                <img src="{2}">
-            </a>
             <a href="https://torchdrug.ai/" style="text-decoration: none;">
                 <img src="{0}{1}">
             </a>
-            <a href="https://github.com/chembl/chembl_webresource_client" style="text-decoration: none;">
+            <a href="https://github.com/mcs07/PubChemPy" style="text-decoration: none;">
+                <img src="{2}">
+            </a>
+            <a href="https://github.com/voidpunk/pytrials" style="text-decoration: none;">
                 <img src="{3}">
             </a>
+            <a href="https://github.com/chembl/chembl_webresource_client" style="text-decoration: none;">
+                <img src="{4}">
+            </a>
         </div>
-        """.format(torchdrug_base, torchdrug_logo, chembl_shield, pytrials_shield),
+        """.format(torchdrug_base, torchdrug_logo, pubchempy_shield, pytrials_shield, chembl_shield),
         unsafe_allow_html=True
         )
 
@@ -397,7 +547,7 @@ def footer():
         """
         <div align="right">
             <p>
-                Trial-AId v0.2.2
+                Trial-AId v0.3.0
                 <br>
                 Nil
                 <i>&#64voidpunk</i>
@@ -411,8 +561,8 @@ def footer():
 
 
 def main():
+    global data_collection, TELEGRAM_API_KEY
     intro()
-    # col1, col2 = st.columns((5, 1))
     # st.write("Enter the molecule name:")
     key = st.text_input(
         label="ENTER THE MOLECULE NAME:",
@@ -421,7 +571,8 @@ def main():
         # autocomplete="on",
         )
     # col2.write("<br>", unsafe_allow_html=True)
-    with st.expander("Accepted formats"):
+    col1, col2 = st.columns((8, 3))
+    with col1.expander("Accepted formats:"):
         st.write(
             """
             <p>
@@ -453,11 +604,14 @@ def main():
             """,
             unsafe_allow_html=True
         )
-    key = key.strip()
+    data_collection = col2.checkbox("Allow data collection")
     if key != "":
+        key = key.strip()
+        if data_collection:
+            gather_data(key, TELEGRAM_API_KEY)
         t0 = time()
         # query ChEMBL database
-        with st.spinner("Searching through more than 110 million compounds..."):
+        with st.spinner("Searching through 110+ million compounds..."):
             molecule = query(key)
         # easter egg and dedication
         if key == "Charlie":
@@ -478,7 +632,6 @@ def main():
         print(f"Time: {t1 - t0}s")
     about()
     footer()
-
 
 
 
