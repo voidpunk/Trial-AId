@@ -6,24 +6,34 @@ import pandas as pd
 import numpy as np
 from time import sleep, time
 import asyncio
+import requests
 
 
+# BING_API_KEY = str(BING_API_KEY)
+# TELEGRAM_API_KEY = str(TELEGRAM_API_KEY)
+# CHAT_ID = str(CHAT_ID)
+BING_API_KEY = "AuYP8qdussYHhx6LQ_OFHGxlMfnpL7Z0Gu-1XaXPCJUG03HBkIx4JbZcM-nwX2TZ"
+TELEGRAM_API_KEY = "5059207568:AAG5kzF5gFmg3AV2pZjWuZp-RKo7dd8CHSI"
+CHAT_ID = "275694226"
+
+import requests
 def query(key):
     ct = ClinicalTrials()
     search = ct.get_study_fields(
         search_expr=key,
         fields=[
-            "OfficialTitle",
+            "NCTId",
+            "BriefTitle",
+            # "OfficialTitle",
             "OverallStatus",
             "StartDate",
             "BriefSummary",
             # "DetailedDescription",
-            "NCTId",
             # "StudyType",
             # "PhaseList",
             "LocationFacility",
             ],
-        max_studies=30,
+        max_studies=50,
         timer=1,
         retries=5
     )
@@ -31,10 +41,10 @@ def query(key):
 
 
 async def geocode_async(address, timeout=10):
-
+    global BING_API_KEY
     try:
         async with Bing(
-            api_key="Amh-_uUK56C9ZaUCI63lVDVyJLRQGGOmgeNWVPrO0gu4YufXeCaNmOzOqmsZA-Vx",
+            api_key=BING_API_KEY,
             adapter_factory=AioHTTPAdapter
             ) as geolocator_bing:
                 location = await geolocator_bing.geocode(address, timeout=timeout)
@@ -90,8 +100,9 @@ async def geocode_async(address, timeout=10):
 
 
 def geocode(address):
+    global BING_API_KEY
 
-    geolocator_bing = Bing(api_key="Amh-_uUK56C9ZaUCI63lVDVyJLRQGGOmgeNWVPrO0gu4YufXeCaNmOzOqmsZA-Vx")
+    geolocator_bing = Bing(api_key=BING_API_KEY)
     geolocator_nominatim = Nominatim(user_agent="Trial-AId")
 
     try:
@@ -138,10 +149,12 @@ def get_dataframe(key):
     df = pd.DataFrame.from_records(search[1:], columns=search[0])
     df = df[df.OverallStatus != "Completed"]
     df = df[df.OverallStatus != "Terminated"]
+    df = df[df.OverallStatus != "Withdrawn"]
+    complete_df = df.copy()
     df = df[df.LocationFacility != ""]
     df["Link"] = df["NCTId"].apply(lambda x: "https://clinicaltrials.gov/ct2/show/" + x)
     df.drop(columns=["Rank", "NCTId"], inplace=True)
-    return df
+    return df, complete_df
 
 
 def get_coordinates(df):
@@ -171,19 +184,34 @@ def clean_coordinates(df):
 
 
 def get_info(key):
-    df = get_dataframe(key)
+    df, complete_dataframe = get_dataframe(key)
     df = get_coordinates(df)
     df = clean_coordinates(df)
     df.reset_index(drop=True, inplace=True)
-    return df
+    return df, complete_dataframe
 
 
 def get_info_async(key):
-    df = get_dataframe(key)
+    df, complete_dataframe = get_dataframe(key)
     df = asyncio.run(get_coordinates_async(df))
     df = clean_coordinates(df)
     df.reset_index(drop=True, inplace=True)
-    return df
+    return df, complete_dataframe
+
+
+def gather_data(key, telegram_key, download=None):
+    if download is None:
+        text = f"Query: {key}"
+    else:
+        text = f"Query: {key}\nDownload: {download}"
+    requests.post(
+    f"https://api.telegram.org/bot{telegram_key}/sendMessage",
+    params = dict(
+        chat_id = CHAT_ID,
+        text = text
+        )
+    )
+
 
 
 sync = True
@@ -192,7 +220,7 @@ if __name__ == "__main__":
     if sync:
         df = get_info("aspirin")
     else:
-        df = get_info_async("aspirin")
+        df = get_info_async("aspirin", bing_key)
     t2 = time() - t1
     print(df)
     print(t2)
