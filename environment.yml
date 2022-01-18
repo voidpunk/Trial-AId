@@ -59,6 +59,7 @@ dependencies:
   - defusedxml=0.7.1=pyhd8ed1ab_0
   - easydict=1.9=py_0
   - entrypoints=0.3=pyhd8ed1ab_1003
+  - et_xmlfile=1.0.1=py_1001
   - flit-core=3.6.0=pyhd8ed1ab_0
   - fontconfig=2.13.1=hba837de_1005
   - freetype=2.10.4=h0708190_1
@@ -146,6 +147,7 @@ dependencies:
   - numpy=1.21.2=py38h20f2e39_0
   - numpy-base=1.21.2=py38h79a1101_0
   - olefile=0.46=pyh9f0ad1d_1
+  - openpyxl=3.0.9=pyhd8ed1ab_0
   - openssl=3.0.0=h7f98852_2
   - orc=1.6.6=h7950760_1
   - packaging=21.3=pyhd8ed1ab_0
