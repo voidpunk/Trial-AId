@@ -5,13 +5,19 @@ from geopy.adapters import AioHTTPAdapter
 import pandas as pd
 import numpy as np
 from time import sleep, time
+import streamlit as st
 import asyncio
 import requests
 
 
-BING_API_KEY = str(BING_API_KEY)
-TELEGRAM_API_KEY = str(TELEGRAM_API_KEY)
-CHAT_ID = str(CHAT_ID)
+try:
+    BING_API_KEY = str(BING_API_KEY)
+    TELEGRAM_API_KEY = str(TELEGRAM_API_KEY)
+    CHAT_ID = str(CHAT_ID)
+except NameError:
+    BING_API_KEY = st.secrets["BING_API_KEY"]
+    TELEGRAM_API_KEY = st.secrets["TELEGRAM_API_KEY"]
+    CHAT_ID = st.secrets["CHAT_ID"]
 
 
 import requests
