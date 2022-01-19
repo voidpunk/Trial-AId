@@ -563,16 +563,15 @@ def footer():
 def main():
     global data_collection, TELEGRAM_API_KEY
     intro()
-    # st.write("Enter the molecule name:")
     key = st.text_input(
         label="ENTER THE MOLECULE NAME:",
         # value="amoxicillin",
         placeholder="e.g. amoxicillin",
         # autocomplete="on",
         )
-    # col2.write("<br>", unsafe_allow_html=True)
-    col1, col2 = st.columns((8, 3))
-    with col1.expander("Accepted formats:"):
+    col1, col2 = st.columns((3, 6))
+    data_collection = col1.checkbox("Allow data collection")
+    with col2.expander("Accepted formats:"):
         st.write(
             """
             <p>
@@ -604,7 +603,6 @@ def main():
             """,
             unsafe_allow_html=True
         )
-    data_collection = col2.checkbox("Allow data collection")
     if key != "":
         key = key.strip()
         if data_collection:
