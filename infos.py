@@ -10,14 +10,9 @@ import asyncio
 import requests
 
 
-try:
-    BING_API_KEY = str(BING_API_KEY)
-    TELEGRAM_API_KEY = str(TELEGRAM_API_KEY)
-    CHAT_ID = str(CHAT_ID)
-except NameError:
-    BING_API_KEY = st.secrets["BING_API_KEY"]
-    TELEGRAM_API_KEY = st.secrets["TELEGRAM_API_KEY"]
-    CHAT_ID = st.secrets["CHAT_ID"]
+BING_API_KEY = st.secrets["BING_API_KEY"]
+TELEGRAM_API_KEY = st.secrets["TELEGRAM_API_KEY"]
+CHAT_ID = st.secrets["CHAT_ID"]
 
 
 import requests
