@@ -1,9 +1,9 @@
 
 # Trial AId
 
-[![](https://img.shields.io/badge/app-TrialAId-red.svg?&color=red&labelColor=grey&style=for-the-badge)](https://share.streamlit.io/arraymancer/trial-aid)
+[![](https://img.shields.io/badge/app-TrialAId-red.svg?&color=red&labelColor=grey&style=for-the-badge)](https://share.streamlit.io/voidpunk/trial-aid)
 
-![](https://img.shields.io/website?url=https%3A%2F%2Fshare.streamlit.io%2Farraymancer%2Ftrial-aid&style=flat-square)
+![](https://img.shields.io/website?url=https%3A%2F%2Fshare.streamlit.io%2Fvoidpunk%2Ftrial-aid&style=flat-square)
 ![](https://img.shields.io/github/v/release/voidpunk/Trial-AId?include_prereleases&style=flat-square)
 ![](https://img.shields.io/badge/Python-3.8-blue?style=flat-square)
 

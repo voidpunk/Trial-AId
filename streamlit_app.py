@@ -451,7 +451,7 @@ def intro():
         inform the patients about all the possible outcomes of the experimental treatment they are going going to 
         receive.
         <br><br>
-        This is where Trial AId comes: it is an AI-powered tool that aims at providing more detailed and reliable 
+        This is where Trial A.I.d comes: it is an <b>A.I.</b>-powered tool that aims at providing more detailed and reliable 
         information to the patient about the possible outcomes of the clinical <b>trial</b>, in order to <b>aid</b> 
         more informed decisions when choosing to participate to a trial. This is possible thanks to a deep learning 
         algorithm trained on hundreds of thousands of molecules, their properties and interactions.
@@ -468,7 +468,7 @@ def about():
     st.write(
         """
         <p style="text-align: justify;">
-        Trial AId is based on the powerful Torchdrug library (written upon PyTorch) and two enormous databases: 
+        Trial A.I.d is based on the powerful Torchdrug library (written upon PyTorch) and two enormous databases: 
         PubChem (110+ millions of compounds) and ChEMBL (2.1+ millions of compounds). 
         The clinical trials data is retrieved from ClinicalTrials.gov (400,000+ studies from 220 countries).
         <br>
@@ -547,7 +547,7 @@ def footer():
         """
         <div align="right">
             <p>
-                Trial-AId v0.3.0
+                Trial-A.I.d v0.3.1
                 <br>
                 Nil
                 <i>&#64voidpunk</i>
